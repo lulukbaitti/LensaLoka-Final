@@ -3,26 +3,43 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Camera, Sparkles, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Tambahan loading state
   const { login } = useAuth();
   const navigate = useNavigate();
-  const handleSubmit = (e: React.FormEvent) => {
+
+  // 1. Mengubah fungsi handler menjadi async
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
     if (!email || !password) {
       setError('Please fill in all fields!');
       return;
     }
-    const success = login(email, password);
-    if (success) {
-      navigate('/create');
-    } else {
-      setError('Invalid email or password!');
+
+    setIsLoading(true); // Aktifkan loading saat menembak server cloud
+
+    try {
+      // 2. Menambahkan kata kunci await untuk menunggu respon dari Supabase
+      const success = await login(email, password);
+      
+      if (success) {
+        navigate('/create');
+      } else {
+        setError('Invalid email or password!');
+      }
+    } catch (err) {
+      setError('Something went wrong. Please check your connection.');
+    } finally {
+      setIsLoading(false); // Matikan loading setelah proses selesai
     }
   };
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-cream via-baby-blue/20 to-dusty-pink/20 flex items-center justify-center p-6">
       <motion.div
@@ -58,8 +75,9 @@ export function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border-2 border-medium-brown focus:border-cherry-red focus:outline-none bg-cream/50"
-                placeholder="your@email.com" />
-              
+                placeholder="your@email.com"
+                disabled={isLoading} // Kunci input jika sedang loading
+              />
             </div>
 
             <div>
@@ -71,38 +89,36 @@ export function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border-2 border-medium-brown focus:border-cherry-red focus:outline-none bg-cream/50"
-                placeholder="••••••••" />
-              
+                placeholder="••••••••"
+                disabled={isLoading} // Kunci input jika sedang loading
+              />
             </div>
 
-            {error &&
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: -10
-              }}
-              animate={{
-                opacity: 1,
-                y: 0
-              }}
-              className="bg-cherry-red/20 border-2 border-cherry-red text-cherry-red px-4 py-3 rounded-xl text-center font-semibold">
-              
+            {error && (
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: -10
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0
+                }}
+                className="bg-cherry-red/20 border-2 border-cherry-red text-cherry-red px-4 py-3 rounded-xl text-center font-semibold">
                 {error}
               </motion.div>
-            }
+            )}
 
             <motion.button
               type="submit"
-              whileHover={{
-                scale: 1.02
-              }}
-              whileTap={{
-                scale: 0.98
-              }}
-              className="w-full bg-cherry-red text-cream py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2">
-              
+              whileHover={!isLoading ? { scale: 1.02 } : {}}
+              whileTap={!isLoading ? { scale: 0.98 } : {}}
+              disabled={isLoading} // Nonaktifkan tombol saat loading
+              className={`w-full text-cream py-3 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 ${
+                isLoading ? 'bg-cherry-red/60 cursor-not-allowed' : 'bg-cherry-red'
+              }`}>
               <LogIn className="w-5 h-5" />
-              Login
+              {isLoading ? 'Logging in...' : 'Login'}
             </motion.button>
           </form>
 
@@ -112,13 +128,12 @@ export function Login() {
               <Link
                 to="/register"
                 className="text-cherry-red font-bold hover:underline">
-                
                 Register here!
               </Link>
             </p>
           </div>
         </div>
       </motion.div>
-    </div>);
-
+    </div>
+  );
 }

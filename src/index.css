@@ -1,0 +1,33 @@
+/* @import url() FONT IMPORTS MUST ALWAYS BE AT THE VERY TOP OF THIS FILE, ABOVE THE TAILWIND IMPORTS — DO NOT DELETE THIS COMMENT */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Baloo+2:wght@400;500;600;700&display=swap');
+
+/* CRITICAL: THE FOLLOWING TAILWIND IMPORTS MUST NEVER BE DELETED OR REORDERED — DO NOT DELETE THIS COMMENT */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
+
+:root {
+  --dark-brown: #3b2a1e;
+  --medium-brown: #5b4636;
+  --cream: #f6ecd9;
+  --butter-yellow: #ffd966;
+  --dusty-pink: #e8b4b8;
+  --sage-green: #b8c5a0;
+  --baby-blue: #a8d8ea;
+  --cherry-red: #d63447;
+}
+body {
+  font-family: 'Baloo 2', cursive;
+  background: var(--cream);
+  color: var(--dark-brown);
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Fredoka', cursive;
+}
+.brand-text {
+  font-family: 'Fredoka', cursive;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}

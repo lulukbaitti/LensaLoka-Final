@@ -17,7 +17,6 @@ import { templates, Decoration } from '../data/templates'
 import { FILTERS, BG_COLORS, generateFinalStrip } from '../utils/canvas'
 import { PhotoStrip } from '../components/PhotoStrip'
 import { useAuth } from '../contexts/AuthContext'
-// IMPORT KONEKSI SUPABASE DARI LIB KAMU
 import { supabase } from '../lib/supabase'
 
 type Step = 'source' | 'capture' | 'decorate' | 'saving'
@@ -36,6 +35,24 @@ const AVAILABLE_FONTS = [
   { name: 'Playful Hand',     value: '"Comic Sans MS", cursive' },
   { name: 'Bold Impact',      value: 'Impact, sans-serif' },
 ]
+
+// Helper untuk mengubah string Base64 dari canvas menjadi Blob biner file gambar
+const base64ToBlob = (base64Data: string, contentType = 'image/jpeg') => {
+  const byteCharacters = atob(base64Data.split(',')[1])
+  const byteArrays = []
+
+  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+    const slice = byteCharacters.slice(offset, offset + 512)
+    const byteNumbers = new Array(slice.length)
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i)
+    }
+    const byteArray = new Uint8Array(byteNumbers)
+    byteArrays.push(byteArray)
+  }
+
+  return new Blob(byteArrays, { type: contentType })
+}
 
 export function CameraCapture() {
   const { templateId } = useParams()
@@ -198,12 +215,12 @@ export function CameraCapture() {
     )
   }
 
-  // ☁️ SIMPAN DATA LANGSUNG KE SUPABASE DATABASE
   const handleSave = async () => {
     if (!template || !user) return
     setStep('saving')
     try {
-      const finalImage = await generateFinalStrip(
+      // 1. Ambil data Base64 hasil render canvas cetak strip
+      const finalImageBase64 = await generateFinalStrip(
         template,
         photos,
         bgColor,
@@ -212,28 +229,44 @@ export function CameraCapture() {
         instagramHandle,
       )
 
-      // Masukkan baris data baru ke tabel cloud Supabase 'user_photos'
-      const { error } = await supabase
-        .from('user_photos')
-        .insert([
-          {
-            user_id: user.id,
-            image: finalImage, // Menyimpan base64 / string gambar strip final
-            templateId: template.id,
-            photos: photos,
-            bgColor: bgColor,
-            userDecorations: userDecorations,
-            stripTitle: stripTitle,
-            instagramHandle: instagramHandle,
-          }
-        ])
+      // 2. Ubah Base64 ke Blob File Gambar asli
+      const imageBlob = base64ToBlob(finalImageBase64, 'image/jpeg')
+      const fileName = `${user.id}/${Date.now()}.jpg`
 
-      if (error) throw error
+      // 3. Upload file ke Supabase Storage bucket 'user_photos'
+      const { error: storageError } = await supabase.storage
+        .from('user_photos')
+        .upload(fileName, imageBlob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        })
+
+      if (storageError) throw storageError
+
+      // 4. Dapatkan URL Publik dari foto yang sukses diupload
+      const { data: { publicUrl } } = supabase.storage
+        .from('user_photos')
+        .getPublicUrl(fileName)
+
+      // 5. Masukkan data record ke tabel database 'user_photos'
+      const { error: dbError } = await supabase
+        .from('user_photos')
+        .insert({
+          user_id: user.id,
+          image_url: publicUrl,
+          template_id: template.id,
+          bg_color: bgColor,
+          strip_title: stripTitle,
+          instagram_handle: instagramHandle,
+          user_decorations: userDecorations,
+        })
+
+      if (dbError) throw dbError
 
       navigate('/gallery')
     } catch (err) {
-      console.error('Gagal menyimpan ke Supabase:', err)
-      alert('Gagal menyimpan foto ke cloud database! Coba lagi.')
+      console.error('Error saving to Supabase:', err)
+      alert('Gagal menyimpan foto ke database cloud! Coba lagi.')
       setStep('decorate')
     }
   }
@@ -260,15 +293,12 @@ export function CameraCapture() {
 
         {/* ── KOLOM KIRI: PREVIEW STRIP ─────────────────── */}
         <div className="w-full md:w-5/12 flex flex-col items-center justify-start pt-4">
-          <div className="w-full max-w-[300px] sticky top-24">
-            <p className="text-xs font-bold text-center text-cherry-red mb-2 animate-bounce">
+          <div className="sticky top-24 flex flex-col items-center gap-4">
+            <p className="text-xs font-bold text-center text-cherry-red animate-bounce">
               💡 Klik & geser stiker langsung di foto ini!
             </p>
 
-            <div
-              className="w-full shadow-2xl rounded overflow-hidden"
-              style={{ border: '2px solid #e5e7eb' }}
-            >
+            <div className="shadow-2xl rounded overflow-hidden">
               <PhotoStrip
                 template={template}
                 photos={photos}
@@ -277,12 +307,13 @@ export function CameraCapture() {
                 stripTitle={stripTitle}
                 instagramHandle={instagramHandle}
                 onUpdateDecoration={step === 'decorate' ? updateDecoration : undefined}
+                displayWidth={300}
               />
             </div>
 
             {/* Background Color Picker */}
             {step !== 'saving' && (
-              <div className="mt-4 bg-white p-4 rounded-2xl shadow-md border-2 border-medium-brown">
+              <div className="w-[300px] bg-white p-4 rounded-2xl shadow-md border-2 border-medium-brown">
                 <p className="font-bold text-sm mb-2 text-center flex justify-center items-center gap-1">
                   <Palette className="w-4 h-4 text-cherry-red" /> Warna Background
                 </p>
@@ -300,7 +331,10 @@ export function CameraCapture() {
                       style={{ backgroundColor: color }}
                     />
                   ))}
-                  <label className="w-8 h-8 rounded-full border-2 border-dashed border-gray-400 flex items-center justify-center cursor-pointer overflow-hidden" title="Warna custom">
+                  <label
+                    className="w-8 h-8 rounded-full border-2 border-dashed border-gray-400 flex items-center justify-center cursor-pointer overflow-hidden"
+                    title="Warna custom"
+                  >
                     <input
                       type="color"
                       value={bgColor}
@@ -636,7 +670,7 @@ export function CameraCapture() {
             <div className="flex flex-col items-center justify-center h-48 gap-4">
               <RefreshCw className="w-12 h-12 text-cherry-red animate-spin" />
               <p className="text-dark-brown font-bold text-lg animate-pulse">
-                Mencetak karyamu ke Cloud Database...
+                Mencetak karyamu...
               </p>
             </div>
           )}

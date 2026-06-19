@@ -17,6 +17,8 @@ import { templates, Decoration } from '../data/templates'
 import { FILTERS, BG_COLORS, generateFinalStrip } from '../utils/canvas'
 import { PhotoStrip } from '../components/PhotoStrip'
 import { useAuth } from '../contexts/AuthContext'
+// IMPORT KONEKSI SUPABASE DARI LIB KAMU
+import { supabase } from '../lib/supabase'
 
 type Step = 'source' | 'capture' | 'decorate' | 'saving'
 
@@ -140,7 +142,6 @@ export function CameraCapture() {
       img.src = ev.target?.result as string
     }
     reader.readAsDataURL(file)
-    // Reset input agar file yang sama bisa dipilih ulang
     e.target.value = ''
   }
 
@@ -197,6 +198,7 @@ export function CameraCapture() {
     )
   }
 
+  // ☁️ SIMPAN DATA LANGSUNG KE SUPABASE DATABASE
   const handleSave = async () => {
     if (!template || !user) return
     setStep('saving')
@@ -209,26 +211,29 @@ export function CameraCapture() {
         stripTitle,
         instagramHandle,
       )
-      const gallery = JSON.parse(
-        localStorage.getItem(`lensaloka_gallery_${user.id}`) || '[]',
-      )
-      gallery.unshift({
-        id: Date.now().toString(),
-        date: new Date().toISOString(),
-        createdAt: Date.now(),
-        image: finalImage,
-        templateId: template.id,
-        photos,
-        bgColor,
-        userDecorations,
-        stripTitle,
-        instagramHandle,
-      })
-      localStorage.setItem(`lensaloka_gallery_${user.id}`, JSON.stringify(gallery))
+
+      // Masukkan baris data baru ke tabel cloud Supabase 'user_photos'
+      const { error } = await supabase
+        .from('user_photos')
+        .insert([
+          {
+            user_id: user.id,
+            image: finalImage, // Menyimpan base64 / string gambar strip final
+            templateId: template.id,
+            photos: photos,
+            bgColor: bgColor,
+            userDecorations: userDecorations,
+            stripTitle: stripTitle,
+            instagramHandle: instagramHandle,
+          }
+        ])
+
+      if (error) throw error
+
       navigate('/gallery')
     } catch (err) {
-      console.error('Error saving:', err)
-      alert('Gagal menyimpan foto! Coba lagi.')
+      console.error('Gagal menyimpan ke Supabase:', err)
+      alert('Gagal menyimpan foto ke cloud database! Coba lagi.')
       setStep('decorate')
     }
   }
@@ -260,10 +265,6 @@ export function CameraCapture() {
               💡 Klik & geser stiker langsung di foto ini!
             </p>
 
-            {/* 
-              Preview strip: lebar tetap 300px, tinggi otomatis ikut aspectRatio.
-              Ini menjamin tampilan IDENTIK dengan hasil download.
-            */}
             <div
               className="w-full shadow-2xl rounded overflow-hidden"
               style={{ border: '2px solid #e5e7eb' }}
@@ -299,7 +300,6 @@ export function CameraCapture() {
                       style={{ backgroundColor: color }}
                     />
                   ))}
-                  {/* Custom color picker */}
                   <label className="w-8 h-8 rounded-full border-2 border-dashed border-gray-400 flex items-center justify-center cursor-pointer overflow-hidden" title="Warna custom">
                     <input
                       type="color"
@@ -352,7 +352,6 @@ export function CameraCapture() {
                   <h2 className="brand-text text-2xl">
                     Foto {currentSlot + 1} dari {template.slots}
                   </h2>
-                  {/* Progress dots */}
                   <div className="flex gap-1">
                     {Array.from({ length: template.slots }).map((_, i) => (
                       <div
@@ -369,7 +368,6 @@ export function CameraCapture() {
                   </div>
                 </div>
 
-                {/* Area kamera/upload */}
                 <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden mb-4 shadow-inner">
                   {source === 'camera' ? (
                     <>
@@ -391,7 +389,6 @@ export function CameraCapture() {
                         <FlipHorizontal2 className="w-4 h-4 inline mr-1" /> Mirror
                       </button>
 
-                      {/* Timer overlay */}
                       <AnimatePresence>
                         {timer !== null && (
                           <motion.div
@@ -430,7 +427,6 @@ export function CameraCapture() {
                   )}
                 </div>
 
-                {/* Filter pills */}
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {FILTERS.map((f) => (
                     <button
@@ -447,7 +443,6 @@ export function CameraCapture() {
                   ))}
                 </div>
 
-                {/* Shutter button (kamera only) */}
                 {source === 'camera' && (
                   <div className="flex justify-center mt-4">
                     <button
@@ -477,7 +472,6 @@ export function CameraCapture() {
                 <Smile className="w-6 h-6 text-cherry-red" /> Hias Foto Kamu!
               </h2>
 
-              {/* Input Judul & Instagram */}
               <div className="mb-4 bg-butter-yellow/30 p-4 rounded-2xl border-2 border-dark-brown">
                 <div className="flex flex-col gap-3">
                   <div>
@@ -517,7 +511,6 @@ export function CameraCapture() {
                 </div>
               </div>
 
-              {/* Tambah Teks */}
               <div className="mb-4 bg-cream p-4 rounded-2xl border-2 border-medium-brown">
                 <p className="font-bold text-sm mb-2 text-dark-brown">✏️ Tambah Tulisan</p>
                 <input
@@ -555,7 +548,6 @@ export function CameraCapture() {
                 </button>
               </div>
 
-              {/* Tambah Emoji */}
               <div className="mb-4 bg-cream p-4 rounded-2xl border-2 border-medium-brown">
                 <p className="font-bold text-sm mb-2 text-dark-brown">🎨 Tambah Stiker</p>
                 <div className="flex flex-wrap justify-center gap-1.5 max-h-28 overflow-y-auto p-2 bg-white rounded-xl">
@@ -571,7 +563,6 @@ export function CameraCapture() {
                 </div>
               </div>
 
-              {/* Daftar dekorasi aktif */}
               {userDecorations.length > 0 && (
                 <div className="mb-4">
                   <p className="font-bold mb-2 text-xs text-gray-500">
@@ -630,7 +621,6 @@ export function CameraCapture() {
                 </div>
               )}
 
-              {/* Tombol Simpan */}
               <button
                 onClick={handleSave}
                 className="w-full py-4 bg-cherry-red hover:bg-red-600 transition-colors text-white
@@ -646,7 +636,7 @@ export function CameraCapture() {
             <div className="flex flex-col items-center justify-center h-48 gap-4">
               <RefreshCw className="w-12 h-12 text-cherry-red animate-spin" />
               <p className="text-dark-brown font-bold text-lg animate-pulse">
-                Mencetak karyamu...
+                Mencetak karyamu ke Cloud Database...
               </p>
             </div>
           )}

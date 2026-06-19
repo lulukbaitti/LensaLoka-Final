@@ -7,8 +7,9 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { TemplatePicker } from './pages/TemplatePicker';
 import { CameraCapture } from './pages/CameraCapture';
-import { Gallery } from './pages/Gallery';
+import { Gallery } from './pages/Gallery'; // Tetap pertahankan named import ini
 import { EditPhoto } from './pages/EditPhoto';
+
 export function App() {
   return (
     <AuthProvider>
@@ -17,40 +18,45 @@ export function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          
           <Route
             path="/create"
             element={
-            <ProtectedRoute>
+              <ProtectedRoute>
                 <TemplatePicker />
               </ProtectedRoute>
-            } />
+            } 
+          />
           
           <Route
             path="/capture/:templateId"
             element={
-            <ProtectedRoute>
+              <ProtectedRoute>
                 <CameraCapture />
               </ProtectedRoute>
-            } />
+            } 
+          />
           
           <Route
             path="/gallery"
             element={
-            <ProtectedRoute>
+              <ProtectedRoute>
                 <Gallery />
               </ProtectedRoute>
-            } />
+            } 
+          />
           
           <Route
             path="/edit/:photoId"
             element={
-            <ProtectedRoute>
+              <ProtectedRoute>
                 <EditPhoto />
               </ProtectedRoute>
-            } />
+            } 
+          />
           
         </Routes>
       </BrowserRouter>
-    </AuthProvider>);
-
+    </AuthProvider>
+  );
 }

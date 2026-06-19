@@ -19,17 +19,12 @@ export const BG_COLORS = [
   '#000000',
 ]
 
-// ─── Pastikan font Fredoka sudah ter-load di dokumen ────────
-// Canvas menggunakan font yang sama dengan DOM, tapi hanya jika
-// font sudah di-load oleh browser. Fungsi ini memastikan itu.
 async function ensureFontsLoaded(): Promise<void> {
-  // Cek apakah Fredoka sudah ada di document.fonts
   const fredokaLoaded = [...document.fonts].some(
     (f) => f.family.toLowerCase().includes('fredoka')
   )
 
   if (!fredokaLoaded) {
-    // Inject link element jika belum ada
     const existingLink = document.querySelector('link[data-font="fredoka"]')
     if (!existingLink) {
       const link = document.createElement('link')
@@ -40,18 +35,15 @@ async function ensureFontsLoaded(): Promise<void> {
     }
   }
 
-  // Tunggu semua font ready (termasuk Fredoka yang baru di-inject)
   try {
     await document.fonts.ready
-    // Extra: paksa load Fredoka One secara eksplisit
     await document.fonts.load('bold 40px "Fredoka One"')
     await document.fonts.load('600 40px "Fredoka"')
   } catch {
-    // Jika gagal, lanjutkan dengan fallback font
+    // Fallback silenly
   }
 }
 
-// ─── Load image helper ──────────────────────────────────────
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -62,7 +54,6 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-// ─── Shape path ─────────────────────────────────────────────
 function drawShapePath(
   ctx: CanvasRenderingContext2D,
   shape: string,
@@ -110,12 +101,15 @@ function drawShapePath(
       break
     }
     default:
-      ctx.roundRect(x, y, w, h, (w / 300) * 6)
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(x, y, w, h, (w / 300) * 6)
+      } else {
+        ctx.rect(x, y, w, h)
+      }
       break
   }
 }
 
-// ─── Theme background pattern ───────────────────────────────
 function drawThemeBackground(
   ctx: CanvasRenderingContext2D,
   theme: string,
@@ -206,27 +200,16 @@ function drawThemeBackground(
   }
 }
 
-// ─── Pilih font string yang tepat per dekorasi ───────────────
-// Ini mereplikasi PERSIS logika di PhotoStrip.tsx:
-//   dec.type === 'text'
-//     → template decorations: '"Fredoka", "Georgia", cursive'
-//     → user decorations: (dec as any).fontFamily || 'Georgia, serif'
-//   dec.type === 'emoji'
-//     → 'inherit' (sistem emoji font)
 function getFontFamily(dec: Decoration, isUserDec: boolean): string {
   if (dec.type !== 'text') {
-    // Emoji: pakai font sistem
     return '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif'
   }
   if (isUserDec) {
-    // User-added text: pakai fontFamily pilihan user, atau fallback Georgia
     return (dec as any).fontFamily || 'Georgia, serif'
   }
-  // Template decoration text: SELALU Fredoka (sama dengan PhotoStrip.tsx)
   return '"Fredoka One", "Fredoka", cursive'
 }
 
-// ─── MAIN: generateFinalStrip ────────────────────────────────
 export async function generateFinalStrip(
   template: Template,
   photos: string[],
@@ -236,31 +219,21 @@ export async function generateFinalStrip(
   instagramHandle?: string,
 ): Promise<string> {
 
-  // Pastikan Fredoka ter-load di browser sebelum canvas menggambar teks
   await ensureFontsLoaded()
 
   const canvas = document.createElement('canvas')
   const ctx    = canvas.getContext('2d')
   if (!ctx) throw new Error('No canvas context')
 
-  // Dimensi output: lebar 800px, tinggi ikut aspectRatio template
   const W = 800
   const H = Math.round(W / template.aspectRatio)
   canvas.width  = W
   canvas.height = H
 
-  // ── 1. Background ──────────────────────────────────────────
   ctx.fillStyle = bgColor
   ctx.fillRect(0, 0, W, H)
   drawThemeBackground(ctx, template.theme, W, H)
 
-  // ── 2. Kalkulasi slot ─────────────────────────────────────
-  // IDENTIK dengan PhotoStrip.tsx:
-  //   padX    = instagram ? '5%' : '8%'
-  //   padTop  = stripTitle ? '10%' : '7%'
-  //   padBot  = '15%'
-  //   gap     = '2.5%' antar slot (bukan padding)
-  //   flex-1  → slotH = (areaH - totalGap) / n
   const isInstagram = template.category === 'instagram'
   const padXPct    = isInstagram ? 0.05 : 0.08
   const padTopPct  = stripTitle  ? 0.10 : 0.07
@@ -277,7 +250,6 @@ export async function generateFinalStrip(
   const slotH    = (areaH - gapPx * (n - 1)) / n
   const slotW    = areaW
 
-  // ── 3. Gambar slot foto ────────────────────────────────────
   for (let i = 0; i < n; i++) {
     const sx = areaLeft
     const sy = areaTop + i * (slotH + gapPx)
@@ -310,20 +282,8 @@ export async function generateFinalStrip(
     ctx.stroke()
   }
 
-  // ── 4. Render dekorasi ─────────────────────────────────────
-  //
-  // KUNCI KESAMAAN FONT SIZE:
-  // PhotoStrip.tsx memakai `${dec.size}rem` dalam container 300px lebar.
-  // 1rem = 16px di browser standar.
-  // Canvas ini 800px lebar → scale = 800/300 ≈ 2.667
-  // Jadi: fontSize_canvas = dec.size * 16 * (800/300)
-  //
-  // Konstanta PREVIEW_W = 300 karena:
-  //   CameraCapture.tsx  → max-w-[300px]
-  //   EditPhoto.tsx      → max-w-[280px] (mirip, pakai 300 sebagai basis)
-  //
   const PREVIEW_W = 300
-  const remScale  = 16 * (W / PREVIEW_W)   // = 42.67 px per 1rem
+  const remScale  = 16 * (W / PREVIEW_W)
 
   const userDecIds = new Set(userDecorations.map((d) => d.id))
   const allDecs    = [...template.decorations, ...userDecorations]
@@ -333,7 +293,6 @@ export async function generateFinalStrip(
     const px  = (dec.x / 100) * W
     const py  = (dec.y / 100) * H
     const rot = ((dec.rotation || 0) * Math.PI) / 180
-    // Font size: dec.size rem → pixel di canvas
     const fs  = dec.size * remScale
 
     ctx.save()
@@ -347,20 +306,15 @@ export async function generateFinalStrip(
     if (dec.type === 'text') {
       ctx.font      = `bold ${fs}px ${ff}`
       ctx.fillStyle = dec.color || template.frameColor
-      // Shadow tipis persis seperti PhotoStrip.tsx:
-      //   textShadow: '1px 1px 0 rgba(255,255,255,0.5), -1px -1px 0 rgba(255,255,255,0.5)'
-      // Di canvas: shadowBlur kecil + offset kecil
       ctx.shadowColor   = 'rgba(255,255,255,0.5)'
       ctx.shadowOffsetX = Math.round(W / 800)
       ctx.shadowOffsetY = Math.round(W / 800)
       ctx.shadowBlur    = 0
       ctx.fillText(dec.content, 0, 0)
-      // Reset shadow
       ctx.shadowColor   = 'transparent'
       ctx.shadowOffsetX = 0
       ctx.shadowOffsetY = 0
     } else {
-      // Emoji: font size sedikit lebih besar (emoji secara visual lebih kecil)
       ctx.font = `${fs * 1.05}px ${ff}`
       ctx.fillText(dec.content, 0, 0)
     }
@@ -368,9 +322,6 @@ export async function generateFinalStrip(
     ctx.restore()
   }
 
-  // ── 5. Strip title (opsional) ──────────────────────────────
-  // PhotoStrip.tsx: top: '2.5%', fontSize: '0.7rem', fontWeight: bold,
-  //                 letterSpacing: '0.15em', color: frameColor
   if (stripTitle) {
     const ty = H * 0.025
     const fs = 0.7 * remScale
@@ -379,15 +330,10 @@ export async function generateFinalStrip(
     ctx.fillStyle     = template.frameColor
     ctx.textAlign     = 'center'
     ctx.textBaseline  = 'middle'
-    ctx.letterSpacing = `${fs * 0.15}px`
     ctx.fillText(stripTitle.toUpperCase(), W / 2, ty)
-    ctx.letterSpacing = '0px'
     ctx.restore()
   }
 
-  // ── 6. Instagram handle (opsional) ────────────────────────
-  // PhotoStrip.tsx: bottom: '1.5%', fontSize: '0.55rem', fontWeight: 600,
-  //                 color: frameColor, opacity: 0.85
   if (instagramHandle) {
     const iy = H * (1 - 0.015)
     const fs = 0.55 * remScale
@@ -401,9 +347,6 @@ export async function generateFinalStrip(
     ctx.restore()
   }
 
-  // ── 7. Border luar ─────────────────────────────────────────
-  // PhotoStrip.tsx: border: `4px solid ${frameColor}`
-  // Scale: 4px * (800/300) ≈ 10.67 → 11px di canvas
   const borderW = Math.round(4 * (W / PREVIEW_W))
   ctx.strokeStyle = template.frameColor
   ctx.lineWidth   = borderW

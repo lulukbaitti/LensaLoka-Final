@@ -11,12 +11,12 @@ interface UserPhoto {
   created_at: string
 }
 
+// MENGGUNAKAN EXPORT FUNCTION AGAR MATCH DENGAN IMPORT { Gallery } DI APP.TSX
 export function Gallery() {
   const { user } = useAuth()
   const [photos, setPhotos] = useState<UserPhoto[]>([])
   const [loading, setLoading] = useState(true)
 
-  // 1. Ambil data dari database Supabase berdasarkan user ID
   useEffect(() => {
     async function fetchPhotos() {
       if (!user) return
@@ -39,7 +39,6 @@ export function Gallery() {
     fetchPhotos()
   }, [user])
 
-  // 2. Fungsi hapus foto jika diperlukan
   const handleDelete = async (id: string) => {
     if (!window.confirm('Apakah kamu yakin ingin menghapus foto strip ini?')) return
     

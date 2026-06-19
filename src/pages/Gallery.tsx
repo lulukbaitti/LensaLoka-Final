@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowLeft, Download, Edit3, Trash2, Image as ImageIcon, Camera, RefreshCw } from 'lucide-react'
 // IMPORT Supabase client Anda di sini (sesuaikan path-nya jika berbeda)
-import { supabase } from '../lib/supabase.ts'
+import { supabase } from '../lib/supabase'
 
 interface GalleryItem {
   id:               string

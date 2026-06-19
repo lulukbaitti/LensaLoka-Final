@@ -1,13 +1,15 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Camera, Sparkles, Heart, Image, Edit3 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
+import React from 'react'
+import { Link } from 'react-router-dom'
+import { Camera, Sparkles, Heart, Image, Edit3 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { useAuth } from '../contexts/AuthContext'
+
 export function Home() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth()
+
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-cream via-dusty-pink/20 to-baby-blue/20">
-      {/* Header */}
+    <div className="min-h-screen w-full bg-gradient-to-br from-cream via-dusty-pink/20 to-baby-blue/20 flex flex-col">
+      {/* Header - Tombol navigasi sudah dihapus bersih */}
       <header className="w-full bg-dark-brown text-cream py-4 px-6 shadow-lg">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <h1 className="brand-text text-3xl md:text-4xl flex items-center gap-2">
@@ -15,85 +17,24 @@ export function Home() {
             LensaLoka
             <Sparkles className="w-6 h-6 text-butter-yellow" />
           </h1>
-          <div className="flex gap-3">
-            {isAuthenticated ?
-            <>
-                <Link to="/gallery">
-                  <motion.button
-                  whileHover={{
-                    scale: 1.05
-                  }}
-                  whileTap={{
-                    scale: 0.95
-                  }}
-                  className="px-4 py-2 bg-sage-green text-dark-brown rounded-full font-semibold">
-                  
-                    Gallery
-                  </motion.button>
-                </Link>
-                <Link to="/create">
-                  <motion.button
-                  whileHover={{
-                    scale: 1.05
-                  }}
-                  whileTap={{
-                    scale: 0.95
-                  }}
-                  className="px-4 py-2 bg-cherry-red text-cream rounded-full font-semibold">
-                  
-                    Create
-                  </motion.button>
-                </Link>
-              </> :
-
-            <>
-                <Link to="/login">
-                  <motion.button
-                  whileHover={{
-                    scale: 1.05
-                  }}
-                  whileTap={{
-                    scale: 0.95
-                  }}
-                  className="px-4 py-2 bg-butter-yellow text-dark-brown rounded-full font-semibold">
-                  
-                    Login
-                  </motion.button>
-                </Link>
-                <Link to="/register">
-                  <motion.button
-                  whileHover={{
-                    scale: 1.05
-                  }}
-                  whileTap={{
-                    scale: 0.95
-                  }}
-                  className="px-4 py-2 bg-cherry-red text-cream rounded-full font-semibold">
-                  
-                    Register
-                  </motion.button>
-                </Link>
-              </>
-            }
-          </div>
         </div>
       </header>
 
-      {/* Hero */}
+      {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-6 py-16 text-center">
         <motion.div
           initial={{
             opacity: 0,
-            y: 20
+            y: 20,
           }}
           animate={{
             opacity: 1,
-            y: 0
+            y: 0,
           }}
           transition={{
-            duration: 0.6
-          }}>
-          
+            duration: 0.6,
+          }}
+        >
           <h2 className="brand-text text-5xl md:text-7xl text-dark-brown mb-4">
             Welcome to LensaLoka! 📸
           </h2>
@@ -101,36 +42,58 @@ export function Home() {
             Create cute, decorative photo strips with fun filters, stickers, and
             Y2K vibes!
           </p>
-          <Link to={isAuthenticated ? '/create' : '/register'}>
-            <motion.button
-              whileHover={{
-                scale: 1.05
-              }}
-              whileTap={{
-                scale: 0.95
-              }}
-              className="px-8 py-4 bg-cherry-red text-cream rounded-full text-xl font-bold shadow-lg">
-              
-              {isAuthenticated ? 'Start Creating ✨' : 'Get Started 🎉'}
-            </motion.button>
-          </Link>
+
+          {/* Wrapper Tombol Aksi Utama */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link to={isAuthenticated ? '/create' : '/register'}>
+              <motion.button
+                whileHover={{
+                  scale: 1.05,
+                }}
+                whileTap={{
+                  scale: 0.95,
+                }}
+                className="px-8 py-4 bg-cherry-red text-cream rounded-full text-xl font-bold shadow-lg"
+              >
+                {isAuthenticated ? 'Start Creating ✨' : 'Get Started 🎉'}
+              </motion.button>
+            </Link>
+
+            {/* Tombol Gallery dipindah ke sini (hanya muncul saat user sudah login) */}
+            {isAuthenticated && (
+              <Link to="/gallery">
+                <motion.button
+                  whileHover={{
+                    scale: 1.05,
+                  }}
+                  whileTap={{
+                    scale: 0.95,
+                  }}
+                  className="px-8 py-4 bg-sage-green text-dark-brown rounded-full text-xl font-bold shadow-lg flex items-center gap-2 border-4 border-dark-brown"
+                >
+                  <Image className="w-5 h-5" />
+                  Buka Gallery
+                </motion.button>
+              </Link>
+            )}
+          </div>
         </motion.div>
       </section>
 
-      {/* About */}
+      {/* About Section */}
       <section className="max-w-6xl mx-auto px-6 py-12">
         <motion.div
           initial={{
-            opacity: 0
+            opacity: 0,
           }}
           whileInView={{
-            opacity: 1
+            opacity: 1,
           }}
           viewport={{
-            once: true
+            once: true,
           }}
-          className="bg-white/80 backdrop-blur rounded-3xl p-8 shadow-xl border-4 border-dark-brown">
-          
+          className="bg-white/80 backdrop-blur rounded-3xl p-8 shadow-xl border-4 border-dark-brown"
+        >
           <h3 className="brand-text text-4xl text-dark-brown mb-6 flex items-center gap-3">
             <Heart className="w-10 h-10 text-cherry-red" />
             About LensaLoka
@@ -148,20 +111,20 @@ export function Home() {
         </motion.div>
       </section>
 
-      {/* How to Use */}
+      {/* How to Use Section */}
       <section className="max-w-6xl mx-auto px-6 py-12 mb-16">
         <motion.div
           initial={{
-            opacity: 0
+            opacity: 0,
           }}
           whileInView={{
-            opacity: 1
+            opacity: 1,
           }}
           viewport={{
-            once: true
+            once: true,
           }}
-          className="bg-gradient-to-br from-butter-yellow/30 to-dusty-pink/30 backdrop-blur rounded-3xl p-8 shadow-xl border-4 border-medium-brown">
-          
+          className="bg-gradient-to-br from-butter-yellow/30 to-dusty-pink/30 backdrop-blur rounded-3xl p-8 shadow-xl border-4 border-medium-brown"
+        >
           <h3 className="brand-text text-4xl text-dark-brown mb-8 flex items-center gap-3">
             <Sparkles className="w-10 h-10 text-cherry-red" />
             Cara Penggunaan
@@ -170,10 +133,10 @@ export function Home() {
           <div className="grid md:grid-cols-2 gap-6">
             <motion.div
               whileHover={{
-                scale: 1.02
+                scale: 1.02,
               }}
-              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg">
-              
+              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg"
+            >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-cherry-red text-cream rounded-full flex items-center justify-center brand-text text-2xl flex-shrink-0">
                   1
@@ -192,10 +155,10 @@ export function Home() {
 
             <motion.div
               whileHover={{
-                scale: 1.02
+                scale: 1.02,
               }}
-              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg">
-              
+              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg"
+            >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-butter-yellow text-dark-brown rounded-full flex items-center justify-center brand-text text-2xl flex-shrink-0">
                   2
@@ -215,10 +178,10 @@ export function Home() {
 
             <motion.div
               whileHover={{
-                scale: 1.02
+                scale: 1.02,
               }}
-              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg">
-              
+              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg"
+            >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-sage-green text-dark-brown rounded-full flex items-center justify-center brand-text text-2xl flex-shrink-0">
                   3
@@ -239,10 +202,10 @@ export function Home() {
 
             <motion.div
               whileHover={{
-                scale: 1.02
+                scale: 1.02,
               }}
-              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg">
-              
+              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg"
+            >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-baby-blue text-dark-brown rounded-full flex items-center justify-center brand-text text-2xl flex-shrink-0">
                   4
@@ -263,10 +226,10 @@ export function Home() {
 
             <motion.div
               whileHover={{
-                scale: 1.02
+                scale: 1.02,
               }}
-              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg md:col-span-2">
-              
+              className="bg-white/90 rounded-2xl p-6 border-3 border-dark-brown shadow-lg md:col-span-2"
+            >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-dusty-pink text-dark-brown rounded-full flex items-center justify-center brand-text text-2xl flex-shrink-0">
                   5
@@ -300,6 +263,6 @@ export function Home() {
           </p>
         </div>
       </footer>
-    </div>);
-
+    </div>
+  )
 }

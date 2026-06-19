@@ -1,45 +1,81 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { ArrowLeft, Download, Edit3, Trash2, Image as ImageIcon, Camera } from 'lucide-react'
+import { ArrowLeft, Download, Edit3, Trash2, Image as ImageIcon, Camera, RefreshCw } from 'lucide-react'
+// IMPORT Supabase client Anda di sini (sesuaikan path-nya jika berbeda)
+import { supabase } from '../utils/supabaseClient'
 
 interface GalleryItem {
   id:               string
-  image:            string
+  image:            string // Ini memetakan ke URL gambar di Supabase Storage
   templateId:       string
   photos:           string[]
   bgColor:          string
   userDecorations:  any[]
   stripTitle?:      string
   instagramHandle?: string
-  date?:            string
-  createdAt?:       number
+  created_at?:      string // Menggunakan penamaan timestamp bawaan Supabase
 }
 
 export function Gallery() {
   const { user }    = useAuth()
   const navigate    = useNavigate()
   const [items, setItems] = useState<GalleryItem[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
 
+  // 🔄 AMBIL DATA DARI SUPABASE (Real-time Sinkron HP & Laptop)
   useEffect(() => {
-    if (!user) { navigate('/'); return }
-    const stored: GalleryItem[] = JSON.parse(
-      localStorage.getItem(`lensaloka_gallery_${user.id}`) || '[]',
-    )
-    stored.sort((a, b) => {
-      const ta = a.createdAt ?? new Date(a.date || 0).getTime()
-      const tb = b.createdAt ?? new Date(b.date || 0).getTime()
-      return tb - ta
-    })
-    setItems(stored)
+    if (!user) { 
+      navigate('/')
+      return 
+    }
+
+    async function fetchGallery() {
+      setLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from('user_photos')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }) // Urutkan langsung dari database (terbaru di atas)
+
+        if (error) throw error
+        
+        // Map jika ada perbedaan nama kolom antara state 'image' dan 'photo_url' di DB Anda
+        const mappedData = (data || []).map((dbItem: any) => ({
+          ...dbItem,
+          image: dbItem.image || dbItem.photo_url // Fleksibel membaca kolom image atau photo_url
+        }))
+
+        setItems(mappedData)
+      } catch (err) {
+        console.error('Gagal memuat galeri dari Supabase:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchGallery()
   }, [user, navigate])
 
-  const handleDelete = (id: string) => {
+  // 🗑️ HAPUS DATA LANGSUNG DARI SUPABASE
+  const handleDelete = async (id: string) => {
     if (!window.confirm('Yakin ingin menghapus karya ini?')) return
-    const next = items.filter((item) => item.id !== id)
-    setItems(next)
-    if (user) {
-      localStorage.setItem(`lensaloka_gallery_${user.id}`, JSON.stringify(next))
+    
+    try {
+      // 1. Hapus baris data di tabel Supabase
+      const { error } = await supabase
+        .from('user_photos')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      // 2. Perbarui state tampilan lokal setelah berhasil dihapus di cloud
+      setItems((prev) => prev.filter((item) => item.id !== id))
+    } catch (err) {
+      console.error('Gagal menghapus data:', err)
+      alert('Gagal menghapus foto dari database!')
     }
   }
 
@@ -80,7 +116,14 @@ export function Gallery() {
 
       {/* ── MAIN ──────────────────────────────────────────── */}
       <main className="flex-1 max-w-6xl mx-auto w-full p-4 md:p-6">
-        {items.length === 0 ? (
+        
+        {/* STATE LOADING */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-[60vh] gap-3">
+            <RefreshCw className="w-10 h-10 text-cherry-red animate-spin" />
+            <p className="font-bold text-medium-brown">Sinkronisasi data galeri...</p>
+          </div>
+        ) : items.length === 0 ? (
 
           /* STATE KOSONG */
           <div className="flex flex-col items-center justify-center h-[60vh] text-center">
@@ -101,16 +144,10 @@ export function Gallery() {
         ) : (
           <>
             <p className="text-sm text-medium-brown/70 mb-4 font-medium">
-              {items.length} karya tersimpan
+              {items.length} karya tersimpan cloud ☁️
             </p>
 
-            {/*
-              ── GRID GALERI ─────────────────────────────────
-              Setiap card memiliki tinggi IDENTIK.
-              Gambar ditampilkan dengan object-contain di dalam
-              kotak berukuran tetap, sehingga strip portrait
-              dan frame instagram terlihat rapi berdampingan.
-            */}
+            {/* ── GRID GALERI ───────────────────────────────── */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {items.map((item) => (
                 <div
@@ -118,11 +155,7 @@ export function Gallery() {
                   className="bg-white rounded-2xl shadow-md border-2 border-dark-brown/10 overflow-hidden
                              flex flex-col hover:-translate-y-1 transition-transform duration-200"
                 >
-                  {/*
-                    AREA GAMBAR — tinggi tetap 200px, gambar contain di dalamnya.
-                    bg-gray-50 agar area kosong di sekitar gambar portrait tidak tampak putih polos.
-                    Tidak ada flex-grow/shrink agar tinggi tidak berubah antar card.
-                  */}
+                  {/* AREA GAMBAR */}
                   <div
                     style={{
                       width:           '100%',
@@ -146,7 +179,6 @@ export function Gallery() {
                           height:     'auto',
                           objectFit:  'contain',
                           display:    'block',
-                          // drop-shadow agar gambar tidak melebur ke background
                           filter:     'drop-shadow(0 2px 6px rgba(0,0,0,0.12))',
                         }}
                       />
@@ -158,7 +190,7 @@ export function Gallery() {
                     )}
                   </div>
 
-                  {/* TOMBOL AKSI — selalu di bawah, tinggi tetap */}
+                  {/* TOMBOL AKSI */}
                   <div className="p-3 border-t border-gray-100 flex items-center gap-2 bg-white flex-shrink-0">
                     <button
                       onClick={() => handleDownload(item)}

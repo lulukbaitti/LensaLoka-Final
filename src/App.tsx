@@ -7,7 +7,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { TemplatePicker } from './pages/TemplatePicker';
 import { CameraCapture } from './pages/CameraCapture';
-import { Gallery } from './pages/Gallery'; // Tetap pertahankan named import ini
+import { Gallery } from './pages/Gallery'; // Dipastikan mengambil Named Export
 import { EditPhoto } from './pages/EditPhoto';
 
 export function App() {
